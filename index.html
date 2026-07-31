@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JUNKERS Car Wash — Acceso</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-card">
+
+    <!-- Logo -->
+    <img
+      src="assets/logo.png"
+      alt="Junkers Car Wash"
+      class="login-logo"
+      onerror="this.style.display='none'; document.getElementById('login-brand').style.display='flex';"
+    />
+
+    <!-- Fallback si no hay logo aún -->
+    <div id="login-brand" class="login-title" style="display:none;">
+      <h1>JUNKERS</h1>
+      <p>car wash</p>
+    </div>
+
+    <!-- Título -->
+    <div class="login-title" style="margin-top:-8px;">
+      <p>Ingresa tu PIN de acceso</p>
+    </div>
+
+    <!-- Indicador PIN -->
+    <div class="pin-display" id="pinDisplay">
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+      <div class="pin-dot" id="dot-4"></div>
+    </div>
+
+    <!-- Teclado PIN -->
+    <div class="pin-keypad">
+      <button class="pin-btn" onclick="addDigit('1')">1</button>
+      <button class="pin-btn" onclick="addDigit('2')">2</button>
+      <button class="pin-btn" onclick="addDigit('3')">3</button>
+      <button class="pin-btn" onclick="addDigit('4')">4</button>
+      <button class="pin-btn" onclick="addDigit('5')">5</button>
+      <button class="pin-btn" onclick="addDigit('6')">6</button>
+      <button class="pin-btn" onclick="addDigit('7')">7</button>
+      <button class="pin-btn" onclick="addDigit('8')">8</button>
+      <button class="pin-btn" onclick="addDigit('9')">9</button>
+      <button class="pin-btn btn-del" onclick="deleteDigit()" title="Borrar">⌫</button>
+      <button class="pin-btn" onclick="addDigit('0')">0</button>
+      <button class="pin-btn btn-enter" onclick="submitPin()" id="btnEnter">ENTRAR</button>
+    </div>
+
+    <!-- Mensaje de error -->
+    <div class="login-error" id="loginError"></div>
+
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+<!-- App scripts -->
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+  // ── Si ya hay sesión activa, ir directo al dashboard ──
+  const existing = Auth.getSession();
+  if (existing) window.location.href = 'dashboard.html';
+
+  // ── Estado del PIN ──
+  let pin = '';
+
+  function updateDots() {
+    for (let i = 1; i <= 4; i++) {
+      const dot = document.getElementById(`dot-${i}`);
+      dot.classList.toggle('filled', i <= pin.length);
+    }
+  }
+
+  function setError(msg) {
+    document.getElementById('loginError').textContent = msg;
+  }
+
+  function shakeCard() {
+    const card = document.querySelector('.login-card');
+    card.style.animation = 'none';
+    card.offsetHeight; // reflow
+    card.style.animation = 'shake 0.4s ease';
+  }
+
+  function addDigit(d) {
+    if (pin.length >= 4) return;
+    setError('');
+    pin += d;
+    updateDots();
+    if (pin.length === 4) submitPin();
+  }
+
+  function deleteDigit() {
+    pin = pin.slice(0, -1);
+    updateDots();
+    setError('');
+  }
+
+  async function submitPin() {
+    if (pin.length !== 4) { setError('Ingresa los 4 dígitos.'); return; }
+
+    const btn = document.getElementById('btnEnter');
+    btn.innerHTML = '<div class="spinner"></div>';
+    btn.disabled = true;
+
+    try {
+      const session = await Auth.loginWithPin(pin);
+      // Redirigir al dashboard
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      setError(err.message || 'Error al ingresar. Intenta de nuevo.');
+      shakeCard();
+      pin = '';
+      updateDots();
+      btn.innerHTML = 'ENTRAR';
+      btn.disabled = false;
+    }
+  }
+
+  // Soporte teclado físico
+  document.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') addDigit(e.key);
+    if (e.key === 'Backspace') deleteDigit();
+    if (e.key === 'Enter') submitPin();
+  });
+</script>
+
+<style>
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-8px); }
+    40%       { transform: translateX(8px); }
+    60%       { transform: translateX(-5px); }
+    80%       { transform: translateX(5px); }
+  }
+</style>
+
+</body>
+</html>
